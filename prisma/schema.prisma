@@ -1,0 +1,254 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Rol {
+  ADMIN
+  GERENTE
+  EMPLEADO
+  CLIENTE
+}
+
+enum EstadoMembresia {
+  ACTIVA
+  VENCIDA
+  SUSPENDIDA
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+}
+
+enum EstadoPago {
+  PENDIENTE
+  COMPLETADO
+  CANCELADO
+}
+
+enum TipoAcceso {
+  ENTRADA
+  SALIDA
+}
+
+enum EstadoAcceso {
+  PERMITIDO
+  DENEGADO
+}
+
+// ─────────────────────────────────────────────
+// MODELOS
+// ─────────────────────────────────────────────
+
+model Usuario {
+  id             Int      @id @default(autoincrement())
+  nombre         String   @db.VarChar(100)
+  email          String   @unique @db.VarChar(100)
+  contrasena     String   @db.VarChar(255)
+  rol            Rol      @default(CLIENTE)
+  estado         Boolean  @default(true)
+  fechaRegistro  DateTime @default(now()) @map("fecha_registro")
+
+  // Relaciones
+  miembro        Miembro?
+  sucursal       Sucursal? @relation("GerenteSucursal")
+
+  @@map("usuarios")
+}
+
+model Sucursal {
+  id               Int       @id @default(autoincrement())
+  nombre           String    @db.VarChar(100)
+  direccion        String    @db.VarChar(255)
+  telefono         String?   @db.VarChar(20)
+  ciudad           String    @db.VarChar(100)
+  horarioApertura  String    @map("horario_apertura") @db.VarChar(5)
+  horarioCierre    String    @map("horario_cierre") @db.VarChar(5)
+  estado           Boolean   @default(true)
+  fechaRegistro    DateTime  @default(now()) @map("fecha_registro")
+
+  // Gerente asignado (opcional)
+  gerenteId        Int?      @unique @map("gerente_id")
+  gerente          Usuario?  @relation("GerenteSucursal", fields: [gerenteId], references: [id])
+
+  // Relaciones
+  miembros         Miembro[]
+  accesos          Acceso[]
+  inventario       Inventario[]
+
+  @@map("sucursales")
+}
+
+model PlanMembresia {
+  id            Int       @id @default(autoincrement())
+  nombre        String    @db.VarChar(100)
+  duracionDias  Int       @map("duracion_dias")
+  precio        Decimal   @db.Decimal(10, 2)
+  descripcion   String?   @db.Text
+  estado        Boolean   @default(true)
+  fechaRegistro DateTime  @default(now()) @map("fecha_registro")
+
+  // Relaciones
+  miembros      Miembro[]
+
+  @@map("planes_membresia")
+}
+
+model Miembro {
+  id               Int             @id @default(autoincrement())
+  usuarioId        Int             @unique @map("usuario_id")
+  sucursalId       Int             @map("sucursal_id")
+  planMembresiaId  Int             @map("plan_membresia_id")
+  estadoMembresia  EstadoMembresia @default(ACTIVA) @map("estado_membresia")
+  fechaInicio      DateTime        @map("fecha_inicio") @db.Date
+  fechaFin         DateTime        @map("fecha_fin") @db.Date
+  fechaRegistro    DateTime        @default(now()) @map("fecha_registro")
+
+  // Relaciones
+  usuario          Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  sucursal         Sucursal        @relation(fields: [sucursalId], references: [id])
+  planMembresia    PlanMembresia   @relation(fields: [planMembresiaId], references: [id])
+  pagos            Pago[]
+  accesos          Acceso[]
+  rutinas          Rutina[]
+  planesDieta      PlanDieta[]
+  recomendaciones  RecomendacionSalud[]
+
+  @@map("miembros")
+}
+
+model Pago {
+  id                 Int        @id @default(autoincrement())
+  miembroId          Int        @map("miembro_id")
+  monto              Decimal    @db.Decimal(10, 2)
+  fechaPago          DateTime   @default(now()) @map("fecha_pago")
+  metodoPago         MetodoPago @map("metodo_pago")
+  estado             EstadoPago @default(PENDIENTE)
+  numeroComprobante  String?    @unique @map("numero_comprobante") @db.VarChar(50)
+  notas              String?    @db.Text
+
+  // Relaciones
+  miembro            Miembro    @relation(fields: [miembroId], references: [id])
+
+  @@map("pagos")
+}
+
+model Acceso {
+  id              Int          @id @default(autoincrement())
+  miembroId       Int          @map("miembro_id")
+  sucursalId      Int          @map("sucursal_id")
+  fechaHoraAcceso DateTime     @default(now()) @map("fecha_hora_acceso")
+  tipoAcceso      TipoAcceso   @map("tipo_acceso")
+  estado          EstadoAcceso @default(PERMITIDO)
+
+  // Relaciones
+  miembro         Miembro      @relation(fields: [miembroId], references: [id])
+  sucursal        Sucursal     @relation(fields: [sucursalId], references: [id])
+
+  @@map("accesos")
+}
+
+model Inventario {
+  id              Int      @id @default(autoincrement())
+  sucursalId      Int      @map("sucursal_id")
+  nombreProducto  String   @map("nombre_producto") @db.VarChar(100)
+  categoria       String   @db.VarChar(100)
+  cantidad        Int      @default(0)
+  precioUnitario  Decimal  @map("precio_unitario") @db.Decimal(10, 2)
+  fechaIngreso    DateTime? @map("fecha_ingreso") @db.Date
+  estado          String   @default("Disponible") @db.VarChar(50)
+
+  // Relaciones
+  sucursal        Sucursal @relation(fields: [sucursalId], references: [id])
+
+  @@map("inventario")
+}
+
+// ─────────────────────────────────────────────
+// PORTAL CLIENTE
+// ─────────────────────────────────────────────
+
+model Rutina {
+  id          Int               @id @default(autoincrement())
+  miembroId   Int               @map("miembro_id")
+  nombre      String            @db.VarChar(100)
+  descripcion String?           @db.Text
+  diasSemana  Int               @default(3) @map("dias_semana")
+  objetivo    String            @db.VarChar(100)
+  activa      Boolean           @default(true)
+  creadoEn    DateTime          @default(now()) @map("creado_en")
+
+  miembro     Miembro           @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  ejercicios  EjercicioRutina[]
+
+  @@map("rutinas")
+}
+
+model EjercicioRutina {
+  id           Int    @id @default(autoincrement())
+  rutinaId     Int    @map("rutina_id")
+  nombre       String @db.VarChar(100)
+  dia          String @db.VarChar(20)
+  series       Int
+  repeticiones Int
+  descanso     Int
+  notas        String? @db.Text
+
+  rutina       Rutina  @relation(fields: [rutinaId], references: [id], onDelete: Cascade)
+
+  @@map("ejercicios_rutina")
+}
+
+model PlanDieta {
+  id          Int           @id @default(autoincrement())
+  miembroId   Int           @map("miembro_id")
+  nombre      String        @db.VarChar(100)
+  objetivo    String        @db.VarChar(100)
+  caloriasObj Int?          @map("calorias_obj")
+  activo      Boolean       @default(true)
+  creadoEn    DateTime      @default(now()) @map("creado_en")
+
+  miembro     Miembro       @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  comidas     ComidaDieta[]
+
+  @@map("planes_dieta")
+}
+
+model ComidaDieta {
+  id          Int       @id @default(autoincrement())
+  planDietaId Int       @map("plan_dieta_id")
+  tipo        String    @db.VarChar(30)
+  descripcion String    @db.Text
+  calorias    Int?
+  proteinas   Int?
+  carbos      Int?
+  grasas      Int?
+
+  planDieta   PlanDieta @relation(fields: [planDietaId], references: [id], onDelete: Cascade)
+
+  @@map("comidas_dieta")
+}
+
+model RecomendacionSalud {
+  id          Int      @id @default(autoincrement())
+  miembroId   Int      @map("miembro_id")
+  titulo      String   @db.VarChar(150)
+  descripcion String   @db.Text
+  categoria   String   @db.VarChar(50)
+  activa      Boolean  @default(true)
+  creadoEn    DateTime @default(now()) @map("creado_en")
+
+  miembro     Miembro  @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+
+  @@map("recomendaciones_salud")
+}
