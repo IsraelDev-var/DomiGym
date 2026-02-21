@@ -57,6 +57,7 @@ async function main() {
       rol: 'CLIENTE',
     },
   });
+  
 
   // Planes de membresía
   await prisma.planMembresia.createMany({
