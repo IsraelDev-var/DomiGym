@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { EstadoVenta, TipoItem } from '@prisma/client';
 
 const includeRelaciones = {
   sucursal: { select: { id: true, nombre: true } },
@@ -16,7 +17,7 @@ const includeRelaciones = {
 } as const;
 
 export class VentaRepository {
-  findAll(filtros?: { sucursalId?: number; estado?: string; desde?: Date; hasta?: Date }) {
+  findAll(filtros?: { sucursalId?: number; estado?: EstadoVenta; desde?: Date; hasta?: Date }) {
     return prisma.venta.findMany({
       where: {
         ...(filtros?.sucursalId && { sucursalId: filtros.sucursalId }),
@@ -110,7 +111,7 @@ export class VentaRepository {
     });
   }
 
-  async update(id: number, data: { estado?: EstadoVenta; notas?: string }) {
+  async update(id: number, data: { estado?: EstadoVenta; notas?: string | null }) {
     return prisma.venta.update({
       where: { id },
       data,
@@ -120,7 +121,7 @@ export class VentaRepository {
 
   async restoreStock(ventaId: number) {
     const items = await prisma.itemVenta.findMany({
-      where: { ventaId, tipo: 'PRODUCTO', inventarioId: { not: null } },
+      where: { ventaId, tipo: TipoItem.PRODUCTO, inventarioId: { not: null } },
     });
     for (const item of items) {
       await prisma.inventario.update({

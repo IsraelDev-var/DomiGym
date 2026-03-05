@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { EstadoVenta } from '@prisma/client';
 import { VentaRepository } from './venta.repository';
 import { NotFoundError, ValidationError } from '../../shared/errors';
 import type { CreateVentaDto, UpdateVentaDto, ItemVentaDto } from './venta.schema';
@@ -6,8 +7,8 @@ import type { CreateVentaDto, UpdateVentaDto, ItemVentaDto } from './venta.schem
 export class VentaService {
   constructor(private readonly repo: VentaRepository) {}
 
-  findAll(filtros?: { sucursalId?: number; estado?: string; desde?: Date; hasta?: Date }) {
-    return this.repo.findAll(filtros as any);
+  findAll(filtros?: { sucursalId?: number; estado?: EstadoVenta; desde?: Date; hasta?: Date }) {
+    return this.repo.findAll(filtros);
   }
 
   async findById(id: number) {
@@ -73,7 +74,7 @@ export class VentaService {
       await this.repo.restoreStock(id);
     }
 
-    return this.repo.update(id, dto as any);
+    return this.repo.update(id, { estado: dto.estado as EstadoVenta, notas: dto.notas });
   }
 
   async reporte(desde: Date, hasta: Date, sucursalId?: number) {

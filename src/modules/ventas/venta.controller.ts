@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { EstadoVenta } from '@prisma/client';
 import { VentaService } from './venta.service';
 import { sendSuccess, sendCreated } from '../../shared/response';
 import { generateVentaPdf } from './venta.pdf';
@@ -11,7 +12,7 @@ export class VentaController {
       const { sucursalId, estado, desde, hasta } = req.query;
       const filtros = {
         ...(sucursalId && { sucursalId: Number(sucursalId) }),
-        ...(estado && { estado: estado as string }),
+        ...(estado && { estado: estado as EstadoVenta }),
         ...(desde && { desde: new Date(desde as string) }),
         ...(hasta && { hasta: new Date(hasta as string) }),
       };
