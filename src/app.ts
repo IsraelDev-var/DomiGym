@@ -1,10 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
 import { errorMiddleware } from './middlewares/error.middleware';
+import { requestLogger } from './middlewares/request-logger.middleware';
 import { swaggerSpec } from './config/swagger';
 
 // Rutas de módulos
@@ -20,8 +21,29 @@ import rutinaRoutes from './modules/rutinas/rutina.routes';
 import dietaRoutes from './modules/dietas/dieta.routes';
 import recomendacionRoutes from './modules/recomendaciones/recomendacion.routes';
 import clienteRoutes from './modules/cliente/cliente.routes';
+import facturaRoutes from './modules/facturas/factura.routes';
+import ventaRoutes from './modules/ventas/venta.routes';
 
 const app = express();
+
+// ── Proxy trust (Railway / Render / Fly.io) ───────────────
+app.set('trust proxy', 1);
+
+// ── Rate limiters ─────────────────────────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,   // 1 minuto
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Demasiadas solicitudes, intenta más tarde.' },
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutos
+  max: 10,
+  skipSuccessfulRequests: true,
+  message: { success: false, message: 'Demasiados intentos de inicio de sesión.' },
+});
 
 // ── Seguridad ─────────────────────────────────────────────
 app.use(helmet());
@@ -37,9 +59,12 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// ── Rate limiting global ───────────────────────────────────
+app.use(globalLimiter);
+
 // ── Logger ────────────────────────────────────────────────
 if (env.NODE_ENV !== 'test') {
-  app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'));
+  app.use(requestLogger);
 }
 
 // ── Health Check ──────────────────────────────────────────
@@ -53,6 +78,7 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // ── Rutas API ─────────────────────────────────────────────
 const API = '/api';
 
+app.use(`${API}/auth/login`, loginLimiter);
 app.use(`${API}/auth`, authRoutes);
 app.use(`${API}/usuarios`, usuarioRoutes);
 app.use(`${API}/planes`, membresiaRoutes);
@@ -65,6 +91,8 @@ app.use(`${API}/rutinas`, rutinaRoutes);
 app.use(`${API}/dietas`, dietaRoutes);
 app.use(`${API}/recomendaciones`, recomendacionRoutes);
 app.use(`${API}/cliente`, clienteRoutes);
+app.use(`${API}/facturas`, facturaRoutes);
+app.use(`${API}/ventas`, ventaRoutes);
 
 // ── 404 ───────────────────────────────────────────────────
 app.use((_req, res) => {

@@ -46,6 +46,22 @@ enum EstadoAcceso {
   DENEGADO
 }
 
+enum EstadoFactura {
+  EMITIDA
+  ANULADA
+}
+
+enum EstadoVenta {
+  COMPLETADA
+  ANULADA
+  DEVUELTA
+}
+
+enum TipoItem {
+  PRODUCTO
+  SERVICIO
+}
+
 // ─────────────────────────────────────────────
 // MODELOS
 // ─────────────────────────────────────────────
@@ -85,6 +101,7 @@ model Sucursal {
   miembros         Miembro[]
   accesos          Acceso[]
   inventario       Inventario[]
+  ventas           Venta[]
 
   @@map("sucursales")
 }
@@ -120,10 +137,15 @@ model Miembro {
   planMembresia    PlanMembresia   @relation(fields: [planMembresiaId], references: [id])
   pagos            Pago[]
   accesos          Acceso[]
+  facturas         Factura[]
+  ventas           Venta[]
   rutinas          Rutina[]
   planesDieta      PlanDieta[]
   recomendaciones  RecomendacionSalud[]
 
+  @@index([sucursalId])
+  @@index([planMembresiaId])
+  @@index([estadoMembresia])
   @@map("miembros")
 }
 
@@ -139,7 +161,11 @@ model Pago {
 
   // Relaciones
   miembro            Miembro    @relation(fields: [miembroId], references: [id])
+  factura            Factura?
 
+  @@index([miembroId])
+  @@index([estado])
+  @@index([fechaPago])
   @@map("pagos")
 }
 
@@ -155,6 +181,9 @@ model Acceso {
   miembro         Miembro      @relation(fields: [miembroId], references: [id])
   sucursal        Sucursal     @relation(fields: [sucursalId], references: [id])
 
+  @@index([miembroId])
+  @@index([sucursalId])
+  @@index([fechaHoraAcceso])
   @@map("accesos")
 }
 
@@ -169,8 +198,11 @@ model Inventario {
   estado          String   @default("Disponible") @db.VarChar(50)
 
   // Relaciones
-  sucursal        Sucursal @relation(fields: [sucursalId], references: [id])
+  sucursal        Sucursal    @relation(fields: [sucursalId], references: [id])
+  itemsVenta      ItemVenta[]
 
+  @@index([sucursalId])
+  @@index([categoria])
   @@map("inventario")
 }
 
@@ -251,4 +283,72 @@ model RecomendacionSalud {
   miembro     Miembro  @relation(fields: [miembroId], references: [id], onDelete: Cascade)
 
   @@map("recomendaciones_salud")
+}
+
+// ─────────────────────────────────────────────
+// FACTURACIÓN
+// ─────────────────────────────────────────────
+
+model Factura {
+  id             Int           @id @default(autoincrement())
+  pagoId         Int           @unique @map("pago_id")
+  miembroId      Int           @map("miembro_id")
+  numeroFactura  String        @unique @map("numero_factura") @db.VarChar(30)
+  fechaEmision   DateTime      @default(now()) @map("fecha_emision")
+  subtotal       Decimal       @db.Decimal(10, 2)
+  impuesto       Decimal       @db.Decimal(10, 2)
+  total          Decimal       @db.Decimal(10, 2)
+  estado         EstadoFactura @default(EMITIDA)
+  notas          String?       @db.Text
+
+  pago           Pago          @relation(fields: [pagoId], references: [id])
+  miembro        Miembro       @relation(fields: [miembroId], references: [id])
+
+  @@index([miembroId])
+  @@map("facturas")
+}
+
+// ─────────────────────────────────────────────
+// VENTAS
+// ─────────────────────────────────────────────
+
+model Venta {
+  id             Int          @id @default(autoincrement())
+  sucursalId     Int          @map("sucursal_id")
+  miembroId      Int?         @map("miembro_id")
+  clienteNombre  String?      @map("cliente_nombre") @db.VarChar(100)
+  numeroVenta    String       @unique @map("numero_venta") @db.VarChar(30)
+  fechaVenta     DateTime     @default(now()) @map("fecha_venta")
+  subtotal       Decimal      @db.Decimal(10, 2)
+  impuesto       Decimal      @db.Decimal(10, 2)
+  total          Decimal      @db.Decimal(10, 2)
+  metodoPago     MetodoPago   @map("metodo_pago")
+  estado         EstadoVenta  @default(COMPLETADA)
+  notas          String?      @db.Text
+
+  sucursal       Sucursal     @relation(fields: [sucursalId], references: [id])
+  miembro        Miembro?     @relation(fields: [miembroId], references: [id])
+  items          ItemVenta[]
+
+  @@index([sucursalId])
+  @@index([miembroId])
+  @@index([fechaVenta])
+  @@index([estado])
+  @@map("ventas")
+}
+
+model ItemVenta {
+  id             Int         @id @default(autoincrement())
+  ventaId        Int         @map("venta_id")
+  tipo           TipoItem
+  inventarioId   Int?        @map("inventario_id")
+  nombreItem     String      @map("nombre_item") @db.VarChar(150)
+  cantidad       Int
+  precioUnitario Decimal     @map("precio_unitario") @db.Decimal(10, 2)
+  subtotal       Decimal     @db.Decimal(10, 2)
+
+  venta          Venta       @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  inventario     Inventario? @relation(fields: [inventarioId], references: [id])
+
+  @@map("items_venta")
 }

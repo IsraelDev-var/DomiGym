@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
 import { AppError } from '../shared/errors';
 import { env } from '../config/env';
+import { logger } from '../config/logger';
 
 export const errorMiddleware = (
   err: Error,
@@ -25,6 +26,7 @@ export const errorMiddleware = (
 
   // Errores operacionales propios
   if (err instanceof AppError) {
+    logger.warn(err.message, { statusCode: err.statusCode });
     res.status(err.statusCode).json({
       success: false,
       message: err.message,
@@ -51,6 +53,7 @@ export const errorMiddleware = (
   }
 
   // Error genérico
+  logger.error(err.message, { stack: err.stack });
   const isDev = env.NODE_ENV === 'development';
   res.status(500).json({
     success: false,

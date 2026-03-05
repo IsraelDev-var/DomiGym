@@ -57,6 +57,15 @@ export class MiembroController {
     }
   };
 
+  registrarCompleto = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await this.service.registrarCompleto(req.body);
+      sendCreated(res, data, 'Cliente y membresía registrados exitosamente');
+    } catch (err) {
+      next(err);
+    }
+  };
+
   verificarAcceso = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const data = await this.service.verificarAcceso(Number(req.params.id));
