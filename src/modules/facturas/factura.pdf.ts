@@ -12,7 +12,7 @@ const EMPRESA = {
 
 // Colores
 const COLOR_PRIMARY = '#1d4ed8';   // azul
-const COLOR_DARK    = '#111827';   // casi negro
+const COLOR_DARK    = '#111827';   // negro
 const COLOR_GRAY    = '#6b7280';
 const COLOR_LIGHT   = '#f3f4f6';
 const COLOR_GREEN   = '#059669';
