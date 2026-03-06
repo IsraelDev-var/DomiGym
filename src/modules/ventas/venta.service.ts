@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { EstadoVenta } from '@prisma/client';
+import { EstadoVenta } from './venta.schema'; 
 import { VentaRepository } from './venta.repository';
 import { NotFoundError, ValidationError } from '../../shared/errors';
 import type { CreateVentaDto, UpdateVentaDto, ItemVentaDto } from './venta.schema';

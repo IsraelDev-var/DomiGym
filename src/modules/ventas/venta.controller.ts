@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { EstadoVenta } from '@prisma/client';
+import { EstadoVenta } from './venta.schema';
 import { VentaService } from './venta.service';
 import { sendSuccess, sendCreated } from '../../shared/response';
 import { generateVentaPdf } from './venta.pdf';

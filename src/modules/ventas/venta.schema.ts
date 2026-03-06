@@ -39,3 +39,7 @@ export const reporteQuerySchema = z.object({
 export type CreateVentaDto = z.infer<typeof createVentaSchema>;
 export type UpdateVentaDto = z.infer<typeof updateVentaSchema>;
 export type ItemVentaDto = z.infer<typeof itemVentaSchema>;
+
+// Tipos locales para no depender de la regeneración del cliente Prisma
+export type EstadoVenta = 'COMPLETADA' | 'ANULADA' | 'DEVUELTA';
+export type TipoItem = 'PRODUCTO' | 'SERVICIO';
