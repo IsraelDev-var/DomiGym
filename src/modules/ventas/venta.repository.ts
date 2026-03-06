@@ -17,7 +17,7 @@ const includeRelaciones = {
 } as const;
 
 export class VentaRepository {
-  findAll(filtros?: { sucursalId?: number; estado?: string; desde?: Date; hasta?: Date }) {
+  findAll(filtros?: { sucursalId?: number; estado?: EstadoVenta; desde?: Date; hasta?: Date }) {
     return prisma.venta.findMany({
       where: {
         ...(filtros?.sucursalId && { sucursalId: filtros.sucursalId }),
